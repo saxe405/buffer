@@ -1,5 +1,7 @@
 __all__ = ["Identity"]
 from Definitions import *
+from butools.mam import *
+#import resource
 def matrix_F():
 	F_3 = np.zeros((Up.shape[0]*(M-1),Up.shape[0]*M))
 	F_3 = np.block([
@@ -204,24 +206,21 @@ def matrix_D_i(CQ,i,index):
 		i-=1
 	if i < 0:
 		return np.zeros((CQ.shape[0]*M, CQ.shape[0]*M))
+	
 	D_i = np.block([
-		[CQ, np.zeros((CQ.shape[0],CQ.shape[0]*(M-1)))]
-		])
-	if i > 0:
-		D_i = np.block([
-			[np.zeros((CQ.shape[0]*(i-1), CQ.shape[0]*M))],
-			[D_i]
+			[np.zeros((CQ.shape[0]*i, CQ.shape[0]*M))],
+			[CQ, np.zeros((CQ.shape[0],CQ.shape[0]*(M-1)))]
 			])
-	if i < M:
-		D_i = np.block([
+	D_i = np.block([
 			[D_i],
-			[np.zeros((CQ.shape[0]*(M-i), CQ.shape[0]*M))]			
+			[np.zeros((CQ.shape[0]*(M-i-1), CQ.shape[0]*M))]			
 			])
 	return D_i
 
 def matrix_C_i(CQ,i,index):
 	D_i = matrix_D_i(CQ,i,index)
-	print(Q, D_i.shape)
+	#print(Q, D_i.shape)
+	#print(CQ,i,index)
 	C_i = np.block([
 		[ np.zeros((D_i.shape[0], D_i.shape[0]*(Q-1))), D_i ],
 		[ np.zeros((D_i.shape[0]*(Q-1), D_i.shape[0]*Q))]
@@ -232,8 +231,8 @@ def matrix_BIJ_p(j,index):
 	row_num = j
 	max_column = M-1
 	CQ=Up
-	Bij_p  = matrix_C_i(CQ,0,2)
-	
+	C_i  = matrix_C_i(CQ,0,index)
+	Bij_p = C_i
 	if index == 2:
 		row_num -=1
 	if index == 1:
@@ -242,7 +241,7 @@ def matrix_BIJ_p(j,index):
 	if index == 4:
 		CQ = W
 
-	C_i = matrix_C_i(Up,0,1)
+	#print(Bij_p.shape)
 	if row_num <0:
 		return np.zeros(((T+1)*C_i.shape[0], (T+1)*C_i.shape[0]))
 
@@ -253,8 +252,9 @@ def matrix_BIJ_p(j,index):
 	Bij_p = np.block([
 			[Bij_p, np.zeros((C_i.shape[0], (T-max_column)*C_i.shape[0]))]
 			])
+	#print(row_num, T, j)
 	Bij_p = np.block([
-		[np.zeros(((row_num-1)*C_i.shape[0], (T+1)*C_i.shape[0]))],
+		[np.zeros(((row_num)*C_i.shape[0], (T+1)*C_i.shape[0]))],
 		[Bij_p],
 		[np.zeros(((T-row_num)*C_i.shape[0], (T+1)*C_i.shape[0]))]
 		])
@@ -264,7 +264,9 @@ def matrix_BIJ_p(j,index):
 def matrix_L0():
 	L0 = 0
 	for i in range(T+1):
+		#print(matrix_BIJ_p(0,3).shape)
 		this_row = Identity(i,1)*Identity(0,2)*matrix_BIJ_p(0,1) + Identity(i,1)*(1-Identity(0,2))*matrix_BIJ_p(0,2)+ (1-Identity(i,1))*matrix_BIJ_p(0,3) + matrix_BIJ_p(0,4)
+		
 		for j in range(1,T+1):
 			new_block = Identity(i,1)*Identity(j,2)*matrix_BIJ_p(j,1) + Identity(i,1)*(1-Identity(j,2))*matrix_BIJ_p(j,2)+ (1-Identity(i,1))*matrix_BIJ_p(j,3) + matrix_BIJ_p(j,4)
 			this_row = np.block([
@@ -279,7 +281,13 @@ def matrix_L0():
 				])
 	return L0
 
-#matrix_F()
-#matrix_B()0
-#matrix_L()
-matrix_L0()
+F = matrix_F()
+B =matrix_B()
+L = matrix_L()
+
+
+R, G, U = QBDFundamentalMatrices (B, L, F, matrices="RGU")
+#L_0 = matrix_L0()
+#pi0, R = QBDSolve (B, L, F, L0)
+#print(matrix_D_i(Up,0,2))
+#print(matrix_BIJ_p(1,3).shape)
