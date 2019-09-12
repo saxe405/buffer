@@ -82,8 +82,10 @@ def value_iteration():
 def write_to_disk():
 	if args.verbosity:
 		print("Writing Utilities to excel sheet")
-
-	book = xlsxwriter.Workbook("Updated Utilities_"+ str(args.penalty)+".xlsx")
+	book_name = "Updated Utilities_"+ str(args.penalty)+".xlsx"
+	if args.L_max == 0:
+		book_name = "Updated Utilities_short_term_"+ str(args.penalty)+ ".xlsx"
+	book = xlsxwriter.Workbook(book_name)
 	worksheet = book.add_worksheet()
 
 	#f = open("Updated Utilities.txt", "w")

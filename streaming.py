@@ -17,26 +17,27 @@ def stream_state_without_NP_and_CQ(s):
 	new_state = s_state(s.n1,s.R,s.CQ)
 	new_state = new_state._replace(R=new_state.R-1)
 	if new_state.R == 0:
-		new_state = new_state._replace(R=Q, n1=0)
+		new_state = new_state._replace(n1=0, R=Q)
 
-	new_state = new_state._replace(n1=max(s.n1+max_tiles,T))
+	new_state = new_state._replace(n1=min(new_state.n1+max_tiles,T))
 	return new_state
 
 def stream_state_NP(state,head_movement,Channel):
-	state._replace(n1 = int(state.n1*head_movement), CQ = Channel )
+	state = state._replace(n1 = int(state.n1*head_movement), CQ = Channel )
 	return state
 
 def Networking_Cost_stream(old_state,new_state):
 	num_tiles_downloaded = new_state.n1 - old_state.n1 #this does not have head movements modification so it is okay
-	return num_tiles_downloaded*Cost_CQ_base[old_state.CQ]
+	return max(0,num_tiles_downloaded)*Cost_CQ_base[old_state.CQ]
 
 def Network_utilization_stream(old_state,new_state):
 	num_tiles_downloaded = new_state.n1 - old_state.n1 #this does not have head movements modification so it is okay
 	if old_state.CQ == 0:
-		if num_tiles_downloaded !=0:
+		if num_tiles_downloaded >0:
+			print(old_state, new_state)
 			raise Exception("can not download tiles when channel state is 0")
 		return 0
-	return num_tiles_downloaded/max_tiles_in_CQ(old_state.CQ)
+	return 100*max(0,num_tiles_downloaded)/max_tiles_in_CQ(old_state.CQ)
 
 def Prob_screen_freeze_stream(s):
 	return 1 - F(s.n1)	
@@ -45,5 +46,5 @@ def FOV_handover_stream(s):
 	return F(s.n1)
 
 def FOV_available_stream(s): 
-	buffer_len = 0.5*Identity(s.n1,1) 
+	buffer_len = Identity(s.n1,1) 
 	return buffer_len

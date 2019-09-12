@@ -12,6 +12,9 @@ parser.add_argument("--num_iters", "-ni", help = "number of value iterations to 
 parser.add_argument("--verbosity", "-v", help = "increase output verbosity", type = bool, default = False)
 parser.add_argument("--penalty", '-p', help = "change scale of penalty( 0.75 - low, 1 - moderate, 1.5 - high", type = float, default = 1.0)
 parser.add_argument("--collapse_CQ", '-CQ', help = "Reduce the number of channel states", type = bool, default = True)
+parser.add_argument("--L_max", '-L_max', help = "maximum number of long prediction blocks allowed", type = int, default = 5)
+parser.add_argument("--trace_analysis", "-ta", help = "True: use traces for channel quality, False: use channel quality matrix", type  = bool, default = False )
+parser.add_argument("--trace_number", "-tn", help = "which trace number to use for analysis 1:5", type = int, default = 5)
 args = parser.parse_args()
 
 '''
@@ -33,7 +36,7 @@ if args.verbosity:
 
 Num_tiles_in_Video = 200						# Number of tiles in a frame
 T = int(Num_tiles_in_Video*0.20/4) 				#20 percent of total 200 tiles
-L_max = 5										
+L_max = args.L_max				
 Q = 5											# length of single block, in terms of slot
 M = 3
 
@@ -93,9 +96,9 @@ def isValidState(s):
 # is field of view available for next 1 second if the things go down, i.e. for the next 2*Q slots,
 # we basically need availability of FOV for the first 2 blocks
 def FOV_available(s): 
-	buffer_len = 0.5*Identity(s.n1,1) 
+	buffer_len = Identity(s.n1,1) 
 	if buffer_len > 0:
-		buffer_len+= 0.5*Identity(s.n2,2)
+		buffer_len+= Identity(s.n2,2)
 	return buffer_len
 
 def Network_utilization(s,a):
