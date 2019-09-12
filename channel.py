@@ -2,9 +2,10 @@ import pandas as pd
 import numpy as np
 import math
 
-p = 0.33
+p = 0.6 #0.33
 q = 0.2
-r = 0.8
+r = 0.6
+#r = 0.8
 CQ_matrix = np.matrix([
 	[p, 			15.0*(1-p)/43.0, 	28.0*(1-p)/43.0	],
 	[(1-q)/2, 		q, 					(1-q)/2			],
@@ -18,8 +19,8 @@ def max_tiles_in_CQ(CQ):
 	if CQ == 0:
 		return 0
 	if CQ == 1:
-		return 5
-	return 10
+		return 3#5
+	return 6#10
 
 def filtered_data(activities,environments, areas):
 	data = pd.read_csv("C:/Users/sapoorv/Downloads/CODE/python/VR cache/LTE signal strength traces/dataset/03_outputs/results_dataForStatistics/dataframe.csv") 

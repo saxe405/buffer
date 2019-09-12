@@ -6,9 +6,7 @@ head_movement_matrix = np.zeros((T+1,T+1))
 for den in range(1,T+1):
 	for num in range(den+1):
 		head_movement_matrix[den][num] = head_movement(num,den)
-#print(head_movement_matrix)
-#print(sum(head_movement_matrix[7]))
-#new_state(9,0,1,0,4,0)
+
 def Neighbours(action,s):						# if action a is taken in state a, what are the possible states it can end up in. Clearly for a given s and a, all the `obabilities should sum upto 1
 	Neighbours = set()
 	if not isValidAction(action,s):
@@ -92,7 +90,7 @@ def Neighbours(action,s):						# if action a is taken in state a, what are the p
 		while new_N >= M:
 			new_L +=1
 			new_N -=M	
-	#print(new_state(0,0,new_L,new_N,new_R,s.CQ))
+
 	if new_n1 ==0 and isValidState(new_state(0,new_n2,new_L,new_N,new_R,s.CQ)):
 		for j in range(len(CQs)):
 			if CQ_matrix[s.CQ,CQs[j]] > 0:
@@ -136,7 +134,6 @@ def Probability_matrix(a, s1, s2):								# probability that that the system mov
 
 	prob = CQ_matrix[s1.CQ,s2.CQ]
 	
-	#print(new_st)
 	if new_st.n1 == 0:
 		if s2.n1 !=0 or new_st.n2 != s2.n2:
 			return 0
@@ -145,8 +142,6 @@ def Probability_matrix(a, s1, s2):								# probability that that the system mov
 		if s2.n2 != 0:
 			return 0
 		else:
-			#print(round(1-s2.n1/new_st.n1,2))
-			#print(head_movement_lookup_table)
 			prob *= head_movement_matrix[new_st.n1][s2.n1]
 			return prob
 	else:

@@ -6,9 +6,9 @@ theta_y_range = int(20/theta_y0)
 theta_r_range = int(10/theta_r0)
 
 def head_movement_probability(theta_p, theta_y, theta_r):						# probability that the user moves his head with this much angle for each dimension (pitch, yaw, roll)
-	prob_1 = 0.85
-	prob_2 = 0.90
-	prob_3 = 0.98
+	prob_1 = 0.97
+	prob_2 = 0.99
+	prob_3 = 0.99
 	if theta_p != 0:
 		prob_1 = (1-prob_1)/theta_p_range
 	if theta_y != 0:
