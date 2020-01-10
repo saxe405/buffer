@@ -1,26 +1,68 @@
 import pandas as pd
 import numpy as np
 import math
+import scipy.optimize as optimize
 
-p = 0.6 #0.33
-q = 0.2
-r = 0.6
-#r = 0.8
-CQ_matrix = np.matrix([
-	[p, 			15.0*(1-p)/43.0, 	28.0*(1-p)/43.0	],
-	[(1-q)/2, 		q, 					(1-q)/2			],
-	[24*(1-r)/43, 	19*(1-r)/43, 		r 				]
-])
 
-CQs = [ x for x in range(CQ_matrix.shape[0]) ]				#channel qualities total 5 for now, for each state we have a corresponding cost of downloading
+def get_pqr(pi_vec):    
+       
+    #A = np.array([[pi_vec[0], -0.5*pi_vec[1], -24*pi_vec[2]/43],[ -15*pi_vec[0]/43, pi_vec[1], -19*pi_vec[2]/43],[-28*pi_vec[0]/43, -0.5*pi_vec[1], pi_vec[2]]]) 
+    A = np.array([[pi_vec[0], -0.5*pi_vec[1], -24*pi_vec[2]/43],[ -1*pi_vec[0], pi_vec[1], -19*pi_vec[2]/43],[0, -0.5*pi_vec[1], pi_vec[2]]]) 
+    #b = np.array([pi_vec[0]-0.5*pi_vec[1]-24*pi_vec[2]/43, pi_vec[1] - 15*pi_vec[0]/43 - 19*pi_vec[2]/43, pi_vec[2] - 0.5*pi_vec[1] - 28*pi_vec[0]/43])    
+    b = np.array([pi_vec[0]-0.5*pi_vec[1]-24*pi_vec[2]/43, pi_vec[1] - pi_vec[0] - 19*pi_vec[2]/43, pi_vec[2] - 0.5*pi_vec[1] ])    
+    fun = lambda x: np.dot(np.dot(A, x) - b, np.dot(A, x) - b)
+    
+    bounds = ((0,1),(0,1),(0,1))
+    res = optimize.minimize(fun, (0.2, 0.2,0.7), method='TNC', bounds=bounds, tol=1e-10)
+       
+    return res.x
+
+def get_abcd(pi_vec):    
+       
+    #A = np.array([[pi_vec[0], -0.5*pi_vec[1], -24*pi_vec[2]/43],[ -15*pi_vec[0]/43, pi_vec[1], -19*pi_vec[2]/43],[-28*pi_vec[0]/43, -0.5*pi_vec[1], pi_vec[2]]]) 
+    A = np.array([[pi_vec[0], pi_vec[1], pi_vec[2]],[ pi_vec[0], pi_vec[1], pi_vec[2]]]) 
+    #b = np.array([pi_vec[0]-0.5*pi_vec[1]-24*pi_vec[2]/43, pi_vec[1] - 15*pi_vec[0]/43 - 19*pi_vec[2]/43, pi_vec[2] - 0.5*pi_vec[1] - 28*pi_vec[0]/43])    
+    b = np.array([pi_vec[0], pi_vec[1] ])    
+    fun = lambda x: np.dot(np.dot(A[0], x[:3]) - b[0], np.dot(A[0], x[:3]) - b[0]) + np.dot(np.dot(A[1], x[3:]) - b[1], np.dot(A[1], x[3:]) - b[1])
+    
+    bounds = ((0.4,1),(0,0.5),(0.5,1),(0,0.6),(0.5,1),(0,0.5))
+    res = optimize.minimize(fun, (0.6, 0.2,0.7,0.2,0.6,0.2), method='TNC', bounds=bounds, tol=1e-10)
+       
+    return res.x
+
+def get_CQ_matrix_pi(pi0):
+    return get_CQ_matrix([0.1+pi0,0.7-pi0,0.2])
+    
+    
+def get_CQ_matrix(pi_vec):
+    a,b,c,d,e,f = get_abcd(pi_vec)
+    CQ_matrix = np.matrix([
+        [a, 	d,      1-a-d	],
+    	[b, 	e, 		1-b-e	],
+    	[c, 	f, 		1-c-f 	]
+    ])
+    #p,q,r = get_pqr(pi_vec)
+#    CQ_matrix = np.matrix([
+#        [0.5+a, 			(0.5-p),            	0	],
+#    	[(1-q)/2, 		q, 					(1-q)/2			],
+#    	[24*(1-r)/43, 	19*(1-r)/43, 		r 				]
+#    ])
+#    CQ_matrix = np.matrix([
+#        [p, 			15.0*(1-p)/43.0, 	28.0*(1-p)/43.0	],
+#    	[(1-q)/2, 		q, 					(1-q)/2			],
+#    	[24*(1-r)/43, 	19*(1-r)/43, 		r 				]
+#    ])
+    return CQ_matrix
+CQ_matrix_def = get_CQ_matrix([0.1, 0.8, 0.1])
+CQs = [ x for x in range(CQ_matrix_def.shape[0]) ]				#channel qualities total 5 for now, for each state we have a corresponding cost of downloading
 Cost_CQ_base = [ -0.3 + 30*math.exp(-2.093*x) 	for x in range(len(CQs))] 
 
-def max_tiles_in_CQ(CQ):
+def max_tiles_in_CQ(CQ, T):
 	if CQ == 0:
 		return 0
 	if CQ == 1:
-		return 3#5
-	return 6#10
+		return 2
+	return 4
 
 def filtered_data(activities,environments, areas):
 	data = pd.read_csv("C:/Users/sapoorv/Downloads/CODE/python/VR cache/LTE signal strength traces/dataset/03_outputs/results_dataForStatistics/dataframe.csv") 
