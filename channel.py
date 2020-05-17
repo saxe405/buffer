@@ -5,10 +5,7 @@ import scipy.optimize as optimize
 
 
 def get_pqr(pi_vec):    
-       
-    #A = np.array([[pi_vec[0], -0.5*pi_vec[1], -24*pi_vec[2]/43],[ -15*pi_vec[0]/43, pi_vec[1], -19*pi_vec[2]/43],[-28*pi_vec[0]/43, -0.5*pi_vec[1], pi_vec[2]]]) 
     A = np.array([[pi_vec[0], -0.5*pi_vec[1], -24*pi_vec[2]/43],[ -1*pi_vec[0], pi_vec[1], -19*pi_vec[2]/43],[0, -0.5*pi_vec[1], pi_vec[2]]]) 
-    #b = np.array([pi_vec[0]-0.5*pi_vec[1]-24*pi_vec[2]/43, pi_vec[1] - 15*pi_vec[0]/43 - 19*pi_vec[2]/43, pi_vec[2] - 0.5*pi_vec[1] - 28*pi_vec[0]/43])    
     b = np.array([pi_vec[0]-0.5*pi_vec[1]-24*pi_vec[2]/43, pi_vec[1] - pi_vec[0] - 19*pi_vec[2]/43, pi_vec[2] - 0.5*pi_vec[1] ])    
     fun = lambda x: np.dot(np.dot(A, x) - b, np.dot(A, x) - b)
     
@@ -19,9 +16,7 @@ def get_pqr(pi_vec):
 
 def get_abcd(pi_vec):    
        
-    #A = np.array([[pi_vec[0], -0.5*pi_vec[1], -24*pi_vec[2]/43],[ -15*pi_vec[0]/43, pi_vec[1], -19*pi_vec[2]/43],[-28*pi_vec[0]/43, -0.5*pi_vec[1], pi_vec[2]]]) 
     A = np.array([[pi_vec[0], pi_vec[1], pi_vec[2]],[ pi_vec[0], pi_vec[1], pi_vec[2]]]) 
-    #b = np.array([pi_vec[0]-0.5*pi_vec[1]-24*pi_vec[2]/43, pi_vec[1] - 15*pi_vec[0]/43 - 19*pi_vec[2]/43, pi_vec[2] - 0.5*pi_vec[1] - 28*pi_vec[0]/43])    
     b = np.array([pi_vec[0], pi_vec[1] ])    
     fun = lambda x: np.dot(np.dot(A[0], x[:3]) - b[0], np.dot(A[0], x[:3]) - b[0]) + np.dot(np.dot(A[1], x[3:]) - b[1], np.dot(A[1], x[3:]) - b[1])
     
@@ -41,22 +36,11 @@ def get_CQ_matrix(pi_vec):
     	[b, 	e, 		1-b-e	],
     	[c, 	f, 		1-c-f 	]
     ])
-    #p,q,r = get_pqr(pi_vec)
-#    CQ_matrix = np.matrix([
-#        [0.5+a, 			(0.5-p),            	0	],
-#    	[(1-q)/2, 		q, 					(1-q)/2			],
-#    	[24*(1-r)/43, 	19*(1-r)/43, 		r 				]
-#    ])
-#    CQ_matrix = np.matrix([
-#        [p, 			15.0*(1-p)/43.0, 	28.0*(1-p)/43.0	],
-#    	[(1-q)/2, 		q, 					(1-q)/2			],
-#    	[24*(1-r)/43, 	19*(1-r)/43, 		r 				]
-#    ])
+
     return CQ_matrix
 CQ_matrix_def = get_CQ_matrix([0.1, 0.8, 0.1])
-CQs = [ x for x in range(CQ_matrix_def.shape[0]) ]				#channel qualities total 5 for now, for each state we have a corresponding cost of downloading
-Cost_CQ_base = [ -0.3 + 30*math.exp(-2.093*x) 	for x in range(len(CQs))] 
-
+CQs = [ x for x in range(CQ_matrix_def.shape[0]) ]				 
+Cost_CQ_base = [120, 10, 0.5]
 def max_tiles_in_CQ(CQ, T):
 	if CQ == 0:
 		return 0
@@ -76,10 +60,6 @@ def filtered_data(activities,environments, areas):
 	data = data.replace(to_replace = "I am in a big crowd", value = "People around me")
 	data = data.replace(to_replace =  "I am in a small crowd", value =  "People around me" )
 	data = data.replace(to_replace =  "There are a few people around me", value =  "People around me" )
-
-	#all_activities = ['standing', 'walking', 'in a bus', 'in a car' ]
-	#all_environments = ['rural', 'town', 'large town', 'city', 'large city']
-	#all_areas = ['I am alone', 'People around me']
 
 	data = data[ data.activity.isin(activities) ]
 	data = data[data.environment.isin(environments)]
@@ -135,5 +115,3 @@ def read_from_disk(filename, collapse = False):
 		sheet = "collapsed"
 	mat = np.matrix(pd.read_excel(filename, sheet_name = sheet,index_col = 0))	
 	return mat
-#print(read_from_disk("CQ_matrix.xlsx", collapse = True))
-

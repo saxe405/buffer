@@ -2,23 +2,32 @@ from collections import namedtuple
 from collections import defaultdict
 from channel import get_CQ_matrix, max_tiles_in_CQ
 from channel import *
+import math
 import argparse
 
 parser = argparse.ArgumentParser(prog='cache_mdp')
 parser.add_argument("--verbosity", "-v", help = "increase output verbosity", type = bool, default = True)
+
 parser.add_argument("--penalty", '-p', help = "change scale of penalty( 75 - low, 1 - moderate, 150 - high", type = int, default = 160)
 parser.add_argument("--L_max", '-L_max', help = "maximum number of long prediction blocks allowed", type = int, default = 5)
+parser.add_argument("--head_move", "-hm", help = "Headmovements predicted with 100% accuracy then 0 otherwise 1", type = int, default = 1)
+
+#parser.add_argument("--penalty", '-p', help = "change scale of penalty( 75 - low, 1 - moderate, 150 - high", type = int, default = 120)
+#parser.add_argument("--L_max", '-L_max', help = "maximum number of long prediction blocks allowed", type = int, default = 0)
+#parser.add_argument("--head_move", "-hm", help = "Headmovements predicted with 100% accuracy then 0 otherwise 1", type = int, default = 0)
+
 parser.add_argument("--video_group", '-vg', help = "video group 0 - static, 1 - regular, 2 - erratic", type = int, default = 1 )
 parser.add_argument("--user_group", '-ug', help = "user group 0 - static, 1 - regular, 2 - erratic", type = int, default = 1 )
 parser.add_argument("--trace_analysis", "-ta", help = "True: use traces for channel quality, False: use channel quality matrix", type  = bool, default = False )
 parser.add_argument("--trace_number", "-tn", help = "which trace number to use for analysis 1:5", type = int, default = 5)
 parser.add_argument("--pi0", "-pi0", help = "avg time spend in bad network state, 0-1", type = float, default = 0.2 )
 parser.add_argument("--Mtrust", "-Mt", help = "level of trust you put on long term predictions", type = float, default = 0.80)
+parser.add_argument("--NP_log", "-npl", help = "name of the navigation pattern log file to use", type = str, default = 'W3_all')
 args = parser.parse_args()
 
 CQ_matrix = get_CQ_matrix_pi(args.pi0)
 
-Reward_matrix_coeff = [90,25,8,4]
+Reward_matrix_coeff = [2000,440,90,80]
 #Reward_matrix_coeff = [args.penalty*x for x in Reward_matrix_coeff]
 
 if args.verbosity:
@@ -63,11 +72,8 @@ def f_d(x,block_num = 1, video_group = args.video_group):                # distr
         return 0.05/(T-r)
 
 def F(x,block_num = 1, video_group = args.video_group):    
-    val = 0.34*(x**(0.48))
-    if video_group == 1:
-        val = 0.23*(x**(0.59))
-    elif video_group == 2:
-        val = 0.20*(x**(0.62))
+    val = x/12
+    
     return(min(val,1))
     '''
     val = 0.3*(x**(0.38))
@@ -78,8 +84,10 @@ def F(x,block_num = 1, video_group = args.video_group):
     return(min(val,1))
     '''
 def Identity(x,block_num=1, video_group = args.video_group):
-    s = 0.95 - 0.05*block_num
-    if F(x,block_num, video_group = video_group) >= s:
+    #s = 0.95 - 0.05*block_num
+    #if F(x,block_num, video_group = video_group) >= s:
+    #    return 1
+    if x >=11:
         return 1
     return 0
 
@@ -138,9 +146,9 @@ def FOV_handover(s, video_group = args.video_group):
 def FOV_quality_fn(n, video_group = args.video_group):
     return F(n, video_group = video_group)
 
-def Utility_book_name(penalty,l_max,user_group,video_group, pi0, Mtrust):
+def Utility_book_name(penalty,l_max,user_group,video_group, pi0, Mtrust, h, npl):
     book_name = "Utilities/Updated Utilities_"
-    book_name = book_name + str(penalty)+ "_" + str(l_max) + "_" + str(user_group)+ "_" + str(video_group) + "_" + str(pi0) + "_" + str(Mtrust) + ".xlsx"
+    book_name = book_name + str(penalty)+ "_" + str(l_max) + "_" + str(user_group)+ "_" + str(video_group) + "_" + str(pi0) + "_" + str(Mtrust) + "_" + str(h) + "_" + npl+".xlsx"
     return book_name
 
 def Utility_book_name_old(penalty,l_max,user_group,video_group):
@@ -148,11 +156,10 @@ def Utility_book_name_old(penalty,l_max,user_group,video_group):
     book_name = book_name + str(penalty)+ "_" + str(l_max) + "_" + str(user_group)+ "_" + str(video_group) + ".xlsx"
     return book_name
 
-gamma = 0.99                                 # discount factor of MDP
+gamma = 0.95                                 # discount factor of MDP
 
-# (s,n) -> download n tiles in segment s where s = 1 (first short term segment),2 (second short term segment),3 (long term segments) and n <10. 
+# (s,n) -> download n tiles in segment s where s = 1 (first short term segment),2 (second short term segment),3 (long term segments) 
 All_actions =  [(0,0)] 
-#max_act = max([ max_tiles_in_CQ(c,max_tiles()) for c in range(CQ_matrix.shape[0])])
 
 for n in range(1,5):
     All_actions += [(s,n) for s in range(1,3)]
