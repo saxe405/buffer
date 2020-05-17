@@ -91,7 +91,6 @@ def Neighbours(action,s, T = max_tiles(), L_max = args.L_max):                  
         while new_N >= M:
             new_L +=1
             new_N -=M    
-
     if new_n1 ==0 and isValidState(new_state(0,new_n2,new_L,new_N,new_R,s.CQ), L_max = L_max, T=T):
         if not longer_channel_stay or new_R == Q:
             for j in range(len(CQs)):

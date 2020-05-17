@@ -37,7 +37,7 @@ def next_channel_quality_fn(channel_quality, channel_vector, timer):
         return [ channel_quality, channel_vector]
     return [channel_vector[0], channel_vector[1:]]
     
-def Action_table_builder(book_name):    
+def Action_table_builder(book_name, headfix = False):      
     data = xlrd.open_workbook(book_name)
     table = data.sheets()[0]
     ncols = table.ncols

@@ -36,14 +36,15 @@ def autolabel(rects):
                     textcoords="offset points",
                     ha='center', va='bottom')
 
-def save_fig_cq(lab_vals, x_chart_vals_1, x_chart_vals_2,x_chart_vals_3, filename, ylabel, title, ylimits):
+def save_fig_cq(lab_vals, x_chart_vals, filename, ylabel, title, ylimits):
     labels = [str(int(100*x)) + '%' for x in pi1_range]   
     x = np.arange(len(labels))  # the label locations
     width = 0.35  # the width of the bars
     fig, ax = plt.subplots()
-    rects1 = ax.bar(x - 2*width/3, x_chart_vals_1, 2*width/3, label='predictive-buffering', color = 'tab:blue')
-    rects2 = ax.bar(x            , x_chart_vals_2, 2*width/3, label='short-term-buffering', color = 'tab:orange')
-    rects3 = ax.bar(x + 2*width/3, x_chart_vals_3, 2*width/3, label='no-buffering', color = 'tab:green')
+    rects1 = ax.bar(x - 1*width/8, x_chart_vals[0], width/4, label='predictive-buffering', color = 'tab:blue')
+    rects2 = ax.bar(x + 1*width/8, x_chart_vals[1], width/4, label='short-term-buffering', color = 'tab:orange')
+    rects3 = ax.bar(x + 3*width/8, x_chart_vals[2], width/4, label='no-buffering', color = 'tab:green')
+    rects4 = ax.bar(x - 3*width/8, x_chart_vals[3], width/4, label='benchmark', color = 'tab:purple')
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel(ylabel)
@@ -53,14 +54,9 @@ def save_fig_cq(lab_vals, x_chart_vals_1, x_chart_vals_2,x_chart_vals_3, filenam
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend()
-
-    #autolabel(rects1)
-    #autolabel(rects2)
-    #autolabel(rects3)
-    
-    fig.tight_layout()
-    
-    fig.savefig("C:/Users/sapoorv/Downloads/CODE/python/VR Cache/images_c/" + filename + ".png")
+    ax.grid(False)    
+    fig.tight_layout()    
+    fig.savefig("C:/Users/sapoorv/Downloads/CODE/python/VR Cache/images_c/" + filename + ".pdf")
                     
 reward_penalty_coeff = 160
 l_max_range = [0,5]
@@ -68,6 +64,8 @@ pi1_range= [ round(0.05*x,2) for x in range(2,8)]
 user_gp = 1
 video_gp = 1
 mtrust = 0.8
+npl = 'W3_all'
+h_range = [0,1]
 Action_tables_cq = {}
 
 cachin_states = {}
@@ -83,14 +81,13 @@ state_vec_stream = {}
 print("Building all the action tables")
 for l_m in l_max_range:
     for pi1 in pi1_range:
-        Action_tables_cq[(pi1,l_m)]   = Action_table_builder(Utility_book_name(reward_penalty_coeff,l_m,user_gp,video_gp,pi1,mtrust))
-
-for l_m in l_max_range:
-    for pi1 in pi1_range:
-        cachin_states[(pi1,l_m)]  = starting_State_f(T = max_tiles(video_group = video_gp))                
-        Cost_vec[(pi1,l_m)]       = [0]
-        FOV_quality[(pi1,l_m)]    = []
-        state_vec[(pi1,l_m)]      = []        
+        for h in h_range:
+            key = (pi1,l_m,h)
+            Action_tables_cq[key] = Action_table_builder(Utility_book_name(reward_penalty_coeff,l_m,user_gp,video_gp,pi1,mtrust,h,npl))
+            cachin_states[key]  = starting_State_f(T = max_tiles(video_group = video_gp))                
+            Cost_vec[key]       = [0]
+            FOV_quality[key]    = []
+            state_vec[key]      = []        
 
 for pi1 in pi1_range:
     streamin_states[pi1]      = s_state(max_tiles(video_group = video_gp), Q, starting_State_f().CQ)
@@ -109,29 +106,30 @@ while t < 20000:
     next_states_stream = {}
     for l_m in l_max_range:
         for pi1 in pi1_range:
-            next_states[(pi1,l_m)] = cache_state_without_NP_and_CQ(Action_tables_cq[(pi1,l_m)][cachin_states[(pi1,l_m)]], cachin_states[(pi1,l_m)], T = max_tiles(video_group = video_gp))
+            for h in h_range:                
+                key = (pi1,l_m,h)
+                next_states[key] = cache_state_without_NP_and_CQ(Action_tables_cq[key][cachin_states[key]], cachin_states[key], T = max_tiles(video_group = video_gp))
 
     for pi1 in pi1_range:    
         next_states_stream[pi1] = stream_state_without_NP_and_CQ(streamin_states[pi1], video_group = video_gp)
-
-    head_movement = {1 : np.random.choice([float(x/100) for x in range(len(list(head_movement_lookup_table[1].values())))], p=list(head_movement_lookup_table[1].values()))}
-    #head_movement[0] = np.random.choice([float(x/100) for x in range(len(list(head_movement_lookup_table[0].values())))], p=list(head_movement_lookup_table[0].values()))
-    #head_movement[2] = np.random.choice([float(x/100) for x in range(len(list(head_movement_lookup_table[2].values())))], p=list(head_movement_lookup_table[2].values()))
     
-    if t%5 == 0: #channel state is twice the length now
+    head_movement = {1 : np.random.choice(list(head_movement_lookup_table[1].keys()), p=list(head_movement_lookup_table[1].values()))}
+    
+    if t%5 == 0:
         for pi1 in pi1_range:
-            #print([pi1, 0.2*(1-pi1), 0.8*(1-pi1)])
-            #CQ_mat = get_CQ_matrix([pi1, 0.2*(1-pi1), 0.8*(1-pi1)])        
             CQ_mat = get_CQ_matrix_pi(pi1)   
-            next_channel_quality[pi1] = np.random.choice([x for x in range(CQ_mat.shape[0])], p=[CQ_mat[cachin_states[(pi1,0)].CQ][0,x] for x in range(CQ_mat.shape[0])] )
+            next_channel_quality[pi1] = np.random.choice([x for x in range(CQ_mat.shape[0])], p=[CQ_mat[cachin_states[(pi1,0,1)].CQ][0,x] for x in range(CQ_mat.shape[0])] )
     
     for l_m in l_max_range:       
         for pi1 in pi1_range:
-            #Cost_vec[(pi1,l_m)].append( Networking_Cost_CQ( Action_tables_cq[(pi1,l_m)][cachin_states[(pi1,l_m)]], cachin_states[(pi1,l_m)].CQ))
-            cachin_states[(pi1,l_m)] = cache_state_NP( next_states[(pi1,l_m)], head_movement[1], next_channel_quality[pi1])    
+            for h in h_range:                
+                key = (pi1,l_m,h)
+                if h == 0:
+                    cachin_states[key] = cache_state_NP( next_states[key], 1, next_channel_quality[pi1])    
+                else:                
+                    cachin_states[key] = cache_state_NP( next_states[key], head_movement[1], next_channel_quality[pi1])    
     
     for pi1 in pi1_range:
-        #Cost_vec_stream[pi1].append( Networking_Cost_stream(streamin_states[pi1], next_states_stream[pi1]))  
         streamin_states[pi1] = stream_state_NP( next_states_stream[pi1], head_movement[1],next_channel_quality[pi1])
     t+=1
             
@@ -144,31 +142,36 @@ while t < num_simulations:
     next_states_stream = {}
     for l_m in l_max_range:
         for pi1 in pi1_range:
-            next_states[(pi1,l_m)] = cache_state_without_NP_and_CQ(Action_tables_cq[(pi1,l_m)][cachin_states[(pi1,l_m)]], cachin_states[(pi1,l_m)], T = max_tiles(video_group = video_gp))
+            for h in h_range:                
+                key = (pi1,l_m,h)
+                next_states[key] = cache_state_without_NP_and_CQ(Action_tables_cq[key][cachin_states[key]], cachin_states[key], T = max_tiles(video_group = video_gp))
     
     for pi1 in pi1_range:    
         next_states_stream[pi1] = stream_state_without_NP_and_CQ(streamin_states[pi1], video_group = video_gp)
+        
+    head_movement = {1 : np.random.choice(list(head_movement_lookup_table[1].keys()), p=list(head_movement_lookup_table[1].values()))}   
     
-    head_movement = {1 : np.random.choice([float(x/100) for x in range(len(list(head_movement_lookup_table[1].values())))], p=list(head_movement_lookup_table[1].values()))}
-    #head_movement[0] = np.random.choice([float(x/100) for x in range(len(list(head_movement_lookup_table[0].values())))], p=list(head_movement_lookup_table[0].values()))
-    #head_movement[2] = np.random.choice([float(x/100) for x in range(len(list(head_movement_lookup_table[2].values())))], p=list(head_movement_lookup_table[2].values()))
     if t%5 == 0:
         for pi1 in pi1_range:
-            #CQ_mat = get_CQ_matrix([pi1, 0.2*(1-pi1), 0.8*(1-pi1)])        
             CQ_mat = get_CQ_matrix_pi(pi1)
-            next_channel_quality[pi1] = np.random.choice([x for x in range(CQ_mat.shape[0])], p=[CQ_mat[cachin_states[(pi1,0)].CQ][0,x] for x in range(CQ_mat.shape[0])] )
+            next_channel_quality[pi1] = np.random.choice([x for x in range(CQ_mat.shape[0])], p=[CQ_mat[cachin_states[(pi1,0,1)].CQ][0,x] for x in range(CQ_mat.shape[0])] )
     
     for l_m in l_max_range:       
         for pi1 in pi1_range:
-            Cost_vec[(pi1,l_m)].append( Networking_Cost_CQ( Action_tables_cq[(pi1,l_m)][cachin_states[(pi1,l_m)]], cachin_states[(pi1,l_m)].CQ))                        
-            cachin_states[(pi1,l_m)] = cache_state_NP( next_states[(pi1,l_m)], head_movement[1], next_channel_quality[pi1])    
-            state_vec[(pi1,l_m)].append(cachin_states[(pi1,l_m)])
-            if cachin_states[(pi1,l_m)].R == 1:
-                first_seg = cachin_states[(pi1,l_m)].n1
-                next_action = Action_tables_cq[(pi1,l_m)][cachin_states[(pi1,l_m)]]
-                if next_action[0] == 1:
-                    first_seg +=next_action[1]
-                FOV_quality[(pi1,l_m)].append(FOV_quality_fn(first_seg, video_group = video_gp))
+            for h in h_range:               
+                key = (pi1,l_m,h)
+                Cost_vec[key].append( Networking_Cost_CQ( Action_tables_cq[key][cachin_states[key]], cachin_states[key].CQ))                        
+                if h == 0:
+                    cachin_states[key] = cache_state_NP( next_states[key], 1, next_channel_quality[pi1])    
+                else:                        
+                    cachin_states[key] = cache_state_NP( next_states[key], head_movement[1], next_channel_quality[pi1])    
+                state_vec[key].append(cachin_states[key])
+                if cachin_states[key].R == 1:
+                    first_seg = cachin_states[key].n1
+                    next_action = Action_tables_cq[key][cachin_states[key]]
+                    if next_action[0] == 1:
+                        first_seg +=next_action[1]
+                    FOV_quality[key].append(FOV_quality_fn(first_seg, video_group = video_gp))
             
     for pi1 in pi1_range:
         Cost_vec_stream[pi1].append( Networking_Cost_stream(streamin_states[pi1], next_states_stream[pi1]))  
@@ -181,9 +184,11 @@ while t < num_simulations:
     t+=1
 
 save_fig_cq( pi1_range,
-             [ statistics.mean(FOV_quality[(pi1,5)]) for pi1 in pi1_range],
-             [ statistics.mean(FOV_quality[(pi1,0)]) for pi1 in pi1_range],
+             [[ statistics.mean(FOV_quality[(pi1,5,1)]) for pi1 in pi1_range],
+             [ statistics.mean(FOV_quality[(pi1,0,1)]) for pi1 in pi1_range],
              [ statistics.mean(FOV_quality_stream[pi1]) for pi1 in pi1_range],
+             [ statistics.mean(FOV_quality[(pi1,5,0)]) for pi1 in pi1_range]
+             ],
              "QoEbarchart",
              'FoV quality',
              'Change in QoE with increasing unreliable connection',
@@ -191,21 +196,13 @@ save_fig_cq( pi1_range,
         )
 
 save_fig_cq( pi1_range,
-             [ statistics.mean(Cost_vec[(pi1,5)]) for pi1 in pi1_range],
-             [ statistics.mean(Cost_vec[(pi1,0)]) for pi1 in pi1_range],
+             [[ statistics.mean(Cost_vec[(pi1,5,1)]) for pi1 in pi1_range],
+             [ statistics.mean(Cost_vec[(pi1,0,1)]) for pi1 in pi1_range],
              [ statistics.mean(Cost_vec_stream[pi1]) for pi1 in pi1_range],
+             [ statistics.mean(Cost_vec[(pi1,5,0)]) for pi1 in pi1_range]
+             ],
              "Costbarchart",
              'Resource usage',
-             'Change in costs with increasing unreliable connection',
-             (0,4.5)
+             'Change in resource usage with increasing unreliable connection',
+             (4,14)
         )
-
-#save_fig_cq( pi1_range,
-#             [ statistics.variance(FOV_quality[(pi1,5)]) for pi1 in pi1_range],
-#             [ statistics.variance(FOV_quality[(pi1,0)]) for pi1 in pi1_range],
-#             [ statistics.variance(FOV_quality_stream[pi1]) for pi1 in pi1_range],
-#             "QoEbarchart_variance",
-#             'FoV quality',
-#             'Variance in QOE with increasing unreliable connection',
-#             (0.02,1)
-#        )

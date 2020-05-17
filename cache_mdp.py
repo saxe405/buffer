@@ -38,11 +38,6 @@ def value_iteration_state(s):
             Action_table[s] = action
             util = this_util
         
-        #print(" Action chosen ", action, " with reward ", reward, " additional ", this_util - reward, " total ", this_util)
-        
-        #print(s, action, util)
-            #util = max(util, this_util )        
-        # 0 total prob just means that you can not get out of that state using a given action
         if total_prob!=0 and total_prob < 0.98:
             print(total_prob, s, action)
             neighbours = sorted(neighbours, key = lambda x: getattr(x, "n1") )
@@ -65,7 +60,6 @@ def value_iteration():
     if depth > 30:
         print(Depth_n)
     for st in Depth_n:
-    #for st in All_states:
         if st in Completed_states:
             continue
         Completed_states.add(st)
@@ -92,7 +86,6 @@ def write_to_disk():
     book = xlsxwriter.Workbook(book_name)
     worksheet = book.add_worksheet()
     
-    #f = open("Updated Utilities.txt", "w")
     row = 0
     for key in Utility_table:
         data = [key.n1, key.n2, key.L, key.N, key.R, key.CQ]
@@ -101,8 +94,6 @@ def write_to_disk():
         for col in range(len(data)):
             worksheet.write(row,col, data[col])
         row+=1
-    #    f.write( str(key)+ ":" + str(Utility_table[key]) + "," + str(Action_table[key])+ "\n")
-    #new_state = namedtuple("State", "n1 n2 L N R CQ")
     book.close()
         
 def value_iteration_k_times(k, All_states):
@@ -130,6 +121,3 @@ while len(added_members) > 0:
 
 value_iteration_k_times(args.num_iters, current_set)
 write_to_disk()
-
-#starting_State = new_state(0,0,0,0,Q,2)
-#print(Neighbours(2,starting_State))
